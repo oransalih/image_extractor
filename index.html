@@ -316,6 +316,11 @@
             75% { transform: translateX(10px); }
         }
 
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2.5rem;
@@ -372,14 +377,9 @@
         </div>
     </div>
 
-    <style>
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    </style>
-
     <script>
+        const API_URL = 'http://localhost:3000/api/extract-images';
+        
         const urlInput = document.getElementById('urlInput');
         const extractBtn = document.getElementById('extractBtn');
         const loading = document.getElementById('loading');
@@ -415,121 +415,32 @@
             extractBtn.disabled = true;
 
             try {
-                // Try multiple free CORS proxies
-                const proxies = [
-                    `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                    `https://proxy.cors.sh/${url}`
-                ];
-                
-                let html = null;
-                let lastError = null;
-                
-                for (const proxyUrl of proxies) {
-                    try {
-                        const response = await fetch(proxyUrl, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0'
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            html = await response.text();
-                            break;
-                        }
-                    } catch (e) {
-                        lastError = e;
-                        continue;
-                    }
-                }
-                
-                if (!html) {
-                    throw new Error('Tüm proxy servisleri başarısız oldu. Lütfen farklı bir URL deneyin.');
-                }
-                
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Extract images from multiple sources
-                const imageElements = doc.querySelectorAll('img, [style*="background-image"]');
-                const images = [];
-                
-                imageElements.forEach(el => {
-                    // Get from img src
-                    if (el.tagName === 'IMG') {
-                        let src = el.src || el.dataset.src || el.getAttribute('data-lazy-src') || 
-                                  el.getAttribute('data-original') || el.getAttribute('data-srcset');
-                        
-                        if (src) {
-                            // Handle srcset
-                            if (src.includes(',')) {
-                                src = src.split(',')[0].trim().split(' ')[0];
-                            }
-                            images.push(src);
-                        }
-                    }
-                    
-                    // Get from background-image
-                    const bgImage = el.style.backgroundImage;
-                    if (bgImage && bgImage.includes('url')) {
-                        const match = bgImage.match(/url\(['"]?([^'"()]+)['"]?\)/);
-                        if (match) {
-                            images.push(match[1]);
-                        }
-                    }
+                // Backend'e istek at
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
                 });
-                
-                // Normalize URLs
-                const normalizedImages = images
-                    .map(src => {
-                        if (!src) return null;
-                        
-                        try {
-                            // If already full URL
-                            if (src.startsWith('http://') || src.startsWith('https://')) {
-                                return src;
-                            }
-                            
-                            // If protocol-relative
-                            if (src.startsWith('//')) {
-                                return 'https:' + src;
-                            }
-                            
-                            // If relative URL
-                            const baseUrl = new URL(url);
-                            if (src.startsWith('/')) {
-                                return baseUrl.origin + src;
-                            } else {
-                                return new URL(src, baseUrl.href).href;
-                            }
-                        } catch (e) {
-                            return null;
-                        }
-                    })
-                    .filter(src => {
-                        if (!src) return false;
-                        if (src.startsWith('data:')) return false;
-                        if (src.includes('svg')) return false;
-                        if (src.length > 2000) return false; // Too long URLs are usually base64
-                        return true;
-                    });
 
-                // Remove duplicates
-                const uniqueImages = [...new Set(normalizedImages)];
+                const data = await response.json();
 
-                if (uniqueImages.length === 0) {
+                if (!data.success) {
+                    throw new Error(data.error || 'Bir hata oluştu');
+                }
+
+                if (data.images.length === 0) {
                     showError('Bu web sitesinde resim bulunamadı');
-                    loading.classList.remove('active');
-                    extractBtn.disabled = false;
                     emptyState.style.display = 'block';
                     return;
                 }
 
-                displayImages(uniqueImages);
-                displayStats(uniqueImages.length);
+                displayImages(data.images);
+                displayStats(data.count);
 
             } catch (error) {
-                showError('Resimleri çıkarırken bir hata oluştu: ' + error.message);
+                showError('Hata: ' + error.message);
                 console.error(error);
                 emptyState.style.display = 'block';
             } finally {
