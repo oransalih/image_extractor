@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Extractor - Web'den Resim Çıkar</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #141825;
+            --bg-card: #1a1f35;
+            --accent-primary: #00d9ff;
+            --accent-secondary: #7c3aed;
+            --text-primary: #e8eef7;
+            --text-secondary: #9ca3af;
+            --success: #10b981;
+            --error: #ef4444;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 217, 255, 0.15) 0px, transparent 50%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        h1 {
+            font-family: 'Fraunces', serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        .input-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeInUp 0.6s ease-out 0.1s both;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        button:hover::before {
+            opacity: 1;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-number {
+            color: var(--accent-primary);
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        .image-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: scaleIn 0.4s ease-out both;
+        }
+
+        .image-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 217, 255, 0.2);
+            border-color: var(--accent-primary);
+        }
+
+        .image-wrapper {
+            width: 100%;
+            height: 200px;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover .image-wrapper img {
+            transform: scale(1.05);
+        }
+
+        .image-info {
+            padding: 1rem;
+        }
+
+        .image-url {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            color: var(--error);
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 1.5rem;
+            opacity: 0.3;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .results {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Image Extractor</h1>
+            <p class="subtitle">Web sitelerinden resimleri çıkarın ve indirin</p>
+        </header>
+
+        <div class="input-section">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="urlInput" 
+                    placeholder="https://example.com - Web sitesi URL'sini girin"
+                    autocomplete="off"
+                >
+                <button id="extractBtn">Resimleri Çıkar</button>
+            </div>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="stats" id="stats"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <svg width="50" height="50" viewBox="0 0 50 50" style="animation: rotate 1s linear infinite;">
+                <circle cx="25" cy="25" r="20" fill="none" stroke="var(--accent-primary)" stroke-width="4" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+            </svg>
+            <p style="margin-top: 1rem; color: var(--text-secondary);">Resimler yükleniyor...</p>
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div class="empty-state" id="emptyState">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <h3 style="margin-bottom: 0.5rem;">Henüz resim çıkarılmadı</h3>
+            <p>Yukarıdaki alana bir web sitesi URL'si girin ve resimleri çıkarın</p>
+        </div>
+    </div>
+
+    <style>
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const extractBtn = document.getElementById('extractBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const emptyState = document.getElementById('emptyState');
+        const errorMessage = document.getElementById('errorMessage');
+        const stats = document.getElementById('stats');
+
+        extractBtn.addEventListener('click', extractImages);
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') extractImages();
+        });
+
+        async function extractImages() {
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showError('Lütfen bir URL girin');
+                return;
+            }
+
+            if (!isValidUrl(url)) {
+                showError('Geçerli bir URL girin (örnek: https://example.com)');
+                return;
+            }
+
+            // Reset UI
+            hideError();
+            loading.classList.add('active');
+            results.innerHTML = '';
+            emptyState.style.display = 'none';
+            stats.innerHTML = '';
+            extractBtn.disabled = true;
+
+            try {
+                // Use scraping API
+                const apiUrl = `https://api.scraperapi.com?api_key=DEMO&url=${encodeURIComponent(url)}`;
+                
+                let html;
+                try {
+                    const response = await fetch(apiUrl);
+                    html = await response.text();
+                } catch (e) {
+                    // Fallback: try with corsproxy.io
+                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+                    const response = await fetch(proxyUrl);
+                    html = await response.text();
+                }
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Extract images from multiple sources
+                const imageElements = doc.querySelectorAll('img, [style*="background-image"]');
+                const images = [];
+                
+                imageElements.forEach(el => {
+                    // Get from img src
+                    if (el.tagName === 'IMG') {
+                        let src = el.src || el.dataset.src || el.getAttribute('data-lazy-src') || 
+                                  el.getAttribute('data-original') || el.getAttribute('data-srcset');
+                        
+                        if (src) {
+                            // Handle srcset
+                            if (src.includes(',')) {
+                                src = src.split(',')[0].trim().split(' ')[0];
+                            }
+                            images.push(src);
+                        }
+                    }
+                    
+                    // Get from background-image
+                    const bgImage = el.style.backgroundImage;
+                    if (bgImage && bgImage.includes('url')) {
+                        const match = bgImage.match(/url\(['"]?([^'"()]+)['"]?\)/);
+                        if (match) {
+                            images.push(match[1]);
+                        }
+                    }
+                });
+                
+                // Normalize URLs
+                const normalizedImages = images
+                    .map(src => {
+                        if (!src) return null;
+                        
+                        try {
+                            // If already full URL
+                            if (src.startsWith('http://') || src.startsWith('https://')) {
+                                return src;
+                            }
+                            
+                            // If protocol-relative
+                            if (src.startsWith('//')) {
+                                return 'https:' + src;
+                            }
+                            
+                            // If relative URL
+                            const baseUrl = new URL(url);
+                            if (src.startsWith('/')) {
+                                return baseUrl.origin + src;
+                            } else {
+                                return new URL(src, baseUrl.href).href;
+                            }
+                        } catch (e) {
+                            return null;
+                        }
+                    })
+                    .filter(src => {
+                        if (!src) return false;
+                        if (src.startsWith('data:')) return false;
+                        if (src.includes('svg')) return false;
+                        if (src.length > 2000) return false; // Too long URLs are usually base64
+                        return true;
+                    });
+
+                // Remove duplicates
+                const uniqueImages = [...new Set(normalizedImages)];
+
+                if (uniqueImages.length === 0) {
+                    showError('Bu web sitesinde resim bulunamadı');
+                    loading.classList.remove('active');
+                    extractBtn.disabled = false;
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                displayImages(uniqueImages);
+                displayStats(uniqueImages.length);
+
+            } catch (error) {
+                showError('Resimleri çıkarırken bir hata oluştu: ' + error.message);
+                console.error(error);
+                emptyState.style.display = 'block';
+            } finally {
+                loading.classList.remove('active');
+                extractBtn.disabled = false;
+            }
+        }
+
+        function displayImages(images) {
+            results.innerHTML = '';
+            
+            images.forEach((imgUrl, index) => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.style.animationDelay = `${index * 0.05}s`;
+                
+                card.innerHTML = `
+                    <div class="image-wrapper">
+                        <img src="${imgUrl}" alt="Image ${index + 1}" loading="lazy" onerror="this.parentElement.innerHTML='<p style=\\'color: var(--text-secondary); padding: 1rem;\\'>Yüklenemedi</p>'">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-url" title="${imgUrl}">${imgUrl}</div>
+                        <button class="download-btn" onclick="downloadImage('${imgUrl}', ${index})">
+                            İndir
+                        </button>
+                    </div>
+                `;
+                
+                results.appendChild(card);
+            });
+        }
+
+        function displayStats(count) {
+            stats.innerHTML = `
+                <div class="stat-card">
+                    Toplam Resim: <span class="stat-number">${count}</span>
+                </div>
+            `;
+        }
+
+        async function downloadImage(url, index) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = `image-${index + 1}.${getFileExtension(url)}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                // If CORS blocks direct download, open in new tab
+                window.open(url, '_blank');
+            }
+        }
+
+        function getFileExtension(url) {
+            const pathname = new URL(url).pathname;
+            const ext = pathname.split('.').pop().split('?')[0];
+            return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext.toLowerCase()) ? ext : 'jpg';
+        }
+
+        function isValidUrl(string) {
+            try {
+                const url = new URL(string);
+                return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('active');
+        }
+    </script>
+</body>
+</html>
